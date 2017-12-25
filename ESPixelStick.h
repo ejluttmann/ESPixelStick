@@ -20,11 +20,7 @@
 #ifndef ESPIXELSTICK_H_
 #define ESPIXELSTICK_H_
 
-<<<<<<< HEAD
 const char VERSION[] = "3.2-dev";
-=======
-const char VERSION[] = "3.1-dev (gece uart)";
->>>>>>> pr/1
 const char BUILD_DATE[] = __DATE__;
 
 /*****************************************/
