@@ -105,6 +105,8 @@ config_t            config;         // Current configuration
 uint32_t            *seqError;      // Sequence error tracking for each universe
 uint16_t            uniLast = 1;    // Last Universe to listen for
 bool                reboot = false; // Reboot flag
+bool                testmode_overriden = false;
+uint32_t            e131_empty_timeout = 0;
 AsyncWebServer      web(HTTP_PORT); // Web Server
 AsyncWebSocket      ws("/ws");      // Web Socket Plugin
 uint8_t             *seqTracker;    // Current sequence numbers for each Universe */
@@ -171,11 +173,12 @@ void setup() {
         LOG_PORT.print((char)(pgm_read_byte(BUILD_DATE + i)));
     LOG_PORT.println(")");
 
+    config.testmode = TestMode::DISABLED;
+
     // Load configuration from SPIFFS and set Hostname
     loadConfig();
     WiFi.hostname(config.hostname);
-    config.testmode = TestMode::DISABLED;
-
+    
     // Setup WiFi Handlers
     wifiConnectHandler = WiFi.onStationModeGotIP(onWifiConnect);
 
@@ -705,7 +708,7 @@ void dsDeviceConfig(JsonObject &json) {
     config.mqtt_user = json["mqtt"]["user"].as<String>();
     config.mqtt_password = json["mqtt"]["password"].as<String>();
     config.mqtt_topic = json["mqtt"]["topic"].as<String>();
-
+    
 #if defined(ESPS_MODE_PIXEL)
     /* Pixel */
     config.pixel_type = PixelType(static_cast<uint8_t>(json["pixel"]["type"]));
@@ -742,6 +745,11 @@ void dsDeviceConfig(JsonObject &json) {
 #endif
 }
 
+void dsTestingConfig(JsonObject &json) {
+    // Testing
+    config.testmode = TestMode(static_cast<uint8_t>(json["testing"]["testmode"]));
+}
+
 // Load configugration JSON file
 void loadConfig() {
     // Zeroize Config struct
@@ -774,6 +782,7 @@ void loadConfig() {
 
         dsNetworkConfig(json);
         dsDeviceConfig(json);
+        dsTestingConfig(json);
 
         LOG_PORT.println(F("- Configuration loaded."));
     }
@@ -809,7 +818,7 @@ void serializeConfig(String &jsonString, bool pretty, bool creds) {
     }
     network["dhcp"] = config.dhcp;
     network["ap_fallback"] = config.ap_fallback;
-
+    
     // MQTT
     JsonObject &_mqtt = json.createNestedObject("mqtt");
     _mqtt["enabled"] = config.mqtt;
@@ -826,6 +835,10 @@ void serializeConfig(String &jsonString, bool pretty, bool creds) {
     e131["channel_start"] = config.channel_start;
     e131["channel_count"] = config.channel_count;
     e131["multicast"] = config.multicast;
+
+    // Testing
+    JsonObject &testing = json.createNestedObject("testing");
+    testing["testmode"] = static_cast<uint8_t>(config.testmode);
 
 #if defined(ESPS_MODE_PIXEL)
     // Pixel
@@ -926,6 +939,9 @@ void loop() {
     if (config.testmode == TestMode::DISABLED || config.testmode == TestMode::VIEW_STREAM) {
         // Parse a packet and update pixels
         if (!e131.isEmpty()) {
+            if (testmode_overriden) {
+              e131_empty_timeout = millis() + (1000 * 300);
+            }
             e131.pull(&packet);
             uint16_t universe = htons(packet.universe);
             uint8_t *data = packet.property_values + 1;
@@ -970,8 +986,21 @@ void loop() {
                     buffloc++;
                 }
             }
+        } else {
+          if (testmode_overriden) {
+            if (e131_empty_timeout < millis()) {
+                reboot = true;
+            }
+          }
         }
     } else {  // Other testmodes
+        if (!e131.isEmpty()) {
+          config.testmode = TestMode::DISABLED;
+          updateConfig();
+          testmode_overriden = true;
+          e131_empty_timeout = millis() + (1000 * 300);
+        }
+        
         switch (config.testmode) {
             case TestMode::STATIC: {
                 setStatic(testing.r, testing.g, testing.b);

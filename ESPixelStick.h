@@ -20,7 +20,7 @@
 #ifndef ESPIXELSTICK_H_
 #define ESPIXELSTICK_H_
 
-const char VERSION[] = "3.1-dev";
+const char VERSION[] = "3.2-dev";
 const char BUILD_DATE[] = __DATE__;
 
 /*****************************************/
@@ -169,6 +169,7 @@ typedef struct {
 void serializeConfig(String &jsonString, bool pretty = false, bool creds = false);
 void dsNetworkConfig(JsonObject &json);
 void dsDeviceConfig(JsonObject &json);
+void dsTestingConfig(JsonObject &json);
 void saveConfig();
 
 void connectWifi();

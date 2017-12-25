@@ -51,6 +51,7 @@ extern bool         reboot;     // Reboot flag
 
     S1 - Set Network Config
     S2 - Set Device Config
+    S3 - Set Testing Config
 
     XS - Get RSSI:heap:uptime
     X1 - Get RSSI
@@ -192,6 +193,11 @@ void procS(uint8_t *data, AsyncWebSocketClient *client) {
             dsNetworkConfig(json);
             saveConfig();
             client->text("S1");
+            break;
+        case '3':   // Set Testing
+            dsTestingConfig(json);
+            saveConfig();
+            client->text("S3");
             break;
         case '2':   // Set Device Config
             // Reboot if MQTT changed

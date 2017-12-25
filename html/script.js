@@ -288,6 +288,9 @@ function wsConnect() {
                 case 'S2':
                     setConfig(data);
                     break;
+                case 'S3':
+                    setConfig(data);
+                    break;
                 case 'XS':
                     getSystemStatus(data);
                     break;
@@ -738,6 +741,35 @@ function submitConfig() {
     wsEnqueue('S2' + JSON.stringify(json));
 }
 
+function submitTesting() {
+	var testmode = 0;
+	var tmode = $('#tmode option:selected').val();
+	
+	if (!tmode.localeCompare('t_disabled')) {
+        testmode = 0;
+    }
+    else if (!tmode.localeCompare('t_static')) {
+        testmode = 1;
+    }
+    else if (!tmode.localeCompare('t_chase')) {
+        testmode = 2;
+    }
+    else if (!tmode.localeCompare('t_rainbow')) {
+        testmode = 3;
+    }
+    else if (!tmode.localeCompare('t_view')) {
+        testmode = 4;
+    }
+	
+    var json = {
+            'testing': {
+              'testmode': testmode
+            }
+        };
+		
+    wsEnqueue('S3' + JSON.stringify(json));
+}
+
 function refreshPixel() {
     var proto = $('#p_type option:selected').text();    
     var size = parseInt($('#p_count').val());
@@ -785,7 +817,7 @@ function test() {
     hideShowTestSections();
 
     var tmode = $('#tmode option:selected').val();
-
+	
     if (!tmode.localeCompare('t_disabled')) {
         wsEnqueue('T0');
     }
